@@ -19,6 +19,9 @@ h_factor = len(screen_image) / monitorInfo['Monitor'][3]
 
 ok = 0
 
+length_queue = []
+bears_y = [620, 610, 536, 458, 388, 305]
+
 while True:
     time.sleep(0.1)
     window_rect = GetWindowRect(window_handle)
@@ -32,22 +35,28 @@ while True:
     # cy = round(cy * h_factor)
     # cx = dx + 960
     # cy = dy + 80
-    cx = dx + 230 + randint(-10, 10)
-    cy = dy + 450
-    screen_image = ImageGrab.grab(bbox=[cx, cy, cx + 1, cy + 1])
-    # print(screen_image)
-    p_color = cv2.cvtColor(np.array(screen_image), cv2.COLOR_RGB2RGBA)
-    # if (p_color[0][0][0], p_color[0][0][1], p_color[0][0][2]) != (0, 0, 0):
-    #     print(cx, cy, p_color[0][0][0], p_color[0][0][1], p_color[0][0][2])
-    if p_color[0][0][2] > 200:
-        ok = 0
-        print(cx, cy, p_color[0][0][2])
-    else:
-        ok += 1
-        if ok > 5:
-            print('ok')
+    length_queue = 0
+    for i in range(len(bears_y)):
+        cx = dx + 230 #+ randint(-5, 5)
+        cy = dy + bears_y[i]
+        screen_image = ImageGrab.grab(bbox=[cx, cy, cx + 1, cy + 1])
+        # print(screen_image)
+        p_color = cv2.cvtColor(np.array(screen_image), cv2.COLOR_RGB2RGBA)
+        # if (p_color[0][0][0], p_color[0][0][1], p_color[0][0][2]) != (0, 0, 0):
+        #     print(cx, cy, p_color[0][0][0], p_color[0][0][1], p_color[0][0][2])
+        if p_color[0][0][2] > 200:
+            length_queue += 1
+            if i > length_queue:
+                length_queue = i
+            ok = 0
+            print(cx, cy, p_color[0][0][2])
         else:
-            print('.', end='')
+            ok += 1
+            if ok > 5:
+                print('ok')
+            else:
+                print('.', end='')
+        print(length_queue)
 
 # 37 157 - начало очереди
 # 746 157 - середина очереди

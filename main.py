@@ -1,75 +1,3 @@
-# import numpy as np
-# from PIL import ImageGrab
-# import cv2
-# import time
-# import win32api
-#
-# from win32gui import FindWindow, GetWindowRect
-# from random import randint
-#
-# # FindWindow takes the Window Class name (can be None if unknown), and the window's display text.
-# # window_handle = FindWindow(None, "pygame window")
-# window_handle = FindWindow(None, "Stay in Queue - YouTube — Личный: Microsoft​ Edge")
-#
-# monitorInfo = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0)))
-# screen_image = np.array(ImageGrab.grab())
-#
-# w_factor = len(screen_image[0]) / monitorInfo['Monitor'][2]
-# h_factor = len(screen_image) / monitorInfo['Monitor'][3]
-#
-# ok = 0
-#
-# length_queue = []
-# bears_y = [620, 610, 536, 458, 388, 305]
-#
-# while True:
-#     time.sleep(0.1)
-#     window_rect = GetWindowRect(window_handle)
-#     # print(window_rect)
-#     dx, dy, w, h = window_rect
-#     # cx, cy = win32api.GetCursorPos()
-#     # cx = round(cx * 1.25)
-#     # cy = round(cy * 1.25)
-#     # print(cx, cy)
-#     # cx = round(cx * w_factor)
-#     # cy = round(cy * h_factor)
-#     # cx = dx + 960
-#     # cy = dy + 80
-#     length_queue = 0
-#     for i in range(len(bears_y)):
-#         cx = dx + 230 #+ randint(-5, 5)
-#         cy = dy + bears_y[i]
-#         screen_image = ImageGrab.grab(bbox=[cx, cy, cx + 1, cy + 1])
-#         # print(screen_image)
-#         p_color = cv2.cvtColor(np.array(screen_image), cv2.COLOR_RGB2RGBA)
-#         # if (p_color[0][0][0], p_color[0][0][1], p_color[0][0][2]) != (0, 0, 0):
-#         #     print(cx, cy, p_color[0][0][0], p_color[0][0][1], p_color[0][0][2])
-#         if p_color[0][0][2] > 200:
-#             length_queue += 1
-#             if i > length_queue:
-#                 length_queue = i
-#             ok = 0
-#             print(cx, cy, p_color[0][0][2])
-#         else:
-#             ok += 1
-#             if ok > 5:
-#                 print('ok')
-#             else:
-#                 print('.', end='')
-#         print(length_queue)
-#
-# # 37 157 - начало очереди
-# # 746 157 - середина очереди
-#
-# # 255 206 150
-# # 235 190 138
-#
-# # 149 - 318 y 449
-# # 644 - 806 y 462
-#
-# # настроить подсчёт обеих очередей и вывод по каждой
-
-
 import numpy as np
 from PIL import ImageGrab
 import cv2
@@ -103,23 +31,61 @@ length_queue = []
 left_queue = {
     'x': (115, 240),
     'y': (245, 604),
-    'p': (40, 40)  # precision
+    'p': (5, 5),  # precision
+    'b_s': ()
 }
+b_s_y = (left_queue['y'][1] - left_queue['y'][0]) // 7
+left_queue['b_s'] = (b_s_y, b_s_y)
 
 print(left_queue)
 
 
-def isBear(x, y):
-    print(x, y, end='')
-    screen_image = ImageGrab.grab(bbox=[cx, cy, cx + 1, cy + 1])
-    # print(screen_image)
-    p_color = cv2.cvtColor(np.array(screen_image), cv2.COLOR_RGB2RGBA)
-    if p_color[0][0][2] > 200:
-        print('bear')
+def isBear(x, y, p_color):
+    # print(x, y, end='')
+    if len(p_color) - 1 < y or len(p_color[0] - 1) < x:
+        return False
+    if p_color[y][x][2] > 200:
+        # print('bear')
         return True
-    else:
-        print('')
+    # print('')
     return False
+
+
+def queue_proc(queue_params):
+    max_length_queue = length_queue = 0  #
+    min_y = queue_params['y'][1]
+    screen_image = ImageGrab.grab(bbox=[
+        queue_params['x'][0] * w_factor,
+        queue_params['y'][0] * h_factor,
+        queue_params['x'][1] * w_factor,
+        queue_params['y'][1] * h_factor
+    ])
+    p_color = cv2.cvtColor(np.array(screen_image), cv2.COLOR_RGB2RGBA)
+
+    for qy in range(queue_params['y'][1], queue_params['y'][0], -queue_params['p'][0]):
+        i = 1
+        for qx in range(queue_params['x'][0], queue_params['x'][1], queue_params['p'][1]):
+            qx -= queue_params['x'][0]
+            i = -i
+            if with_cursor:
+                cx, cy = win32api.GetCursorPos()
+                cx = round(cx * w_factor)
+                cy = round(cy * h_factor)
+            else:
+                center_qx = (queue_params['x'][1] - queue_params['x'][0]) // 2 + queue_params['x'][0]
+                cx = dx + center_qx + qx * i  # + randint(-5, 5)
+                cy = dy + qy
+            if isBear(cx - queue_params['x'][0], cy - queue_params['y'][0], p_color):
+                length_queue += 1
+                break
+        if length_queue > 0:
+            if length_queue > max_length_queue:
+                max_length_queue = length_queue
+                min_y = qy
+    if length_queue > 0:
+        # print('queue too long!')
+        real_length_queue = queue_params['y'][1] - min_y
+        print('Длина очереди равна: ', real_length_queue // queue_params['b_s'][1])
 
 
 # with_cursor = True
@@ -129,26 +95,7 @@ while True:
     time.sleep(0.1)
     window_rect = GetWindowRect(window_handle)
     dx, dy, w, h = window_rect
-    length_queue = 0
+    queue_proc(left_queue)
+    queue_proc(right_queue)
 
-    for qy in range(left_queue['y'][1] - 150, left_queue['y'][0], -left_queue['p'][0]):
-        i = 1
-        for qx in range(left_queue['x'][0], left_queue['x'][1], left_queue['p'][1] // 2):
-            qx -= left_queue['x'][0]
-            i = -i
-            if with_cursor:
-                cx, cy = win32api.GetCursorPos()
-                cx = round(cx * w_factor)
-                cy = round(cy * h_factor)
-            else:
-                center_qx = (left_queue['x'][1] - left_queue['x'][0]) // 2 + left_queue['x'][0]
-                cx = dx + center_qx + qx * i  # + randint(-5, 5)
-                cy = dy + qy
-            if isBear(cx, cy):
-                length_queue += 1
-                break
-        if (length_queue > 0):
-            break
-
-    if(length_queue > 0):
-        print('queue too long!')
+# иcправить ошибки + очереди в цикл (вместо двух вызовов)
